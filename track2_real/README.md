@@ -26,6 +26,15 @@ Test crowding-aware conformal prediction sets on real TESS pixels. Synthetic tra
 | `src/conformal.py` | Split and Mondrian conformal, per SPEC |
 | `src/pixels.py` | Gaussian-PSF transit injection and difference images |
 | `src/smoke_test.py` | Phase 1 smoke test (5 targets, needs network). Run from the repo root |
+| `src/config.py` | Phase 2 parameters (proposals until frozen in the protocol) |
+| `src/tic.py` | TIC cone queries, retries, candidate selection and crowding |
+| `src/dataset.py` | Injection with an SNR target, null kappa, packing into the SPEC layout |
+| `src/pool.py` | Target pool across galactic latitudes, crowding histogram, balanced selection |
+| `src/build_dataset.py` | Per-target build with resume, then merge, splits, meta.json |
+| `src/validate_dataset.py` | Hard checks, crowding histogram, split counts |
+| `src/data_card.py` | Writes `DATA_CARD.md` from meta.json and the targets CSV |
+| `src/detrend_check.py` | Null test of difference images by baseline order |
+| `DATA_CARD.md` | Dataset description and limits |
 | `tests/` | pytest tests. Data tests are skipped unless `--run-data` is passed |
 | `outputs/` | Small CSVs and figures (committed). Large files go in `outputs/large/` (ignored) |
 
