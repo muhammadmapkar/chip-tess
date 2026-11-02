@@ -1,0 +1,9 @@
+numpy
+scipy
+torch
+astropy
+lightkurve
+astroquery
+matplotlib
+pandas
+pytest
