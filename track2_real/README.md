@@ -24,6 +24,8 @@ Test crowding-aware conformal prediction sets on real TESS pixels. Synthetic tra
 | `TASKS.md` | Task list |
 | `requirements.txt` | Python dependencies |
 | `src/conformal.py` | Split and Mondrian conformal, per SPEC |
+| `src/pixels.py` | Gaussian-PSF transit injection and difference images |
+| `src/smoke_test.py` | Phase 1 smoke test (5 targets, needs network). Run from the repo root |
 | `tests/` | pytest tests. Data tests are skipped unless `--run-data` is passed |
 | `outputs/` | Small CSVs and figures (committed). Large files go in `outputs/large/` (ignored) |
 

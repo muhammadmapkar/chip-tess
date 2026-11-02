@@ -29,6 +29,8 @@ Status values: OPEN (needs an answer), ASSUMED (we proceed on this assumption), 
 | C3 | Injection PSF | ASSUMED | Gaussian, sigma = 1.0 pixel (parameter). An approximation of the real TESS PSF. Logged. |
 | C4 | TIC 4206066 | ASSUMED | Candidate from a Sept 2026 Zenodo preprint (Rabtsevich). We have not verified the preprint. Display demo only. Shortlist only, no planet claim. |
 | C5 | 40 known off-target TOIs (arXiv 2310.15833) | OPEN | Not yet checked whether the list, true hosts, and 2-minute pixel cutouts are obtainable. If not feasible, log here and skip. |
+| C6 | TIC row filters | ASSUMED | Phase 1 drops `disposition == DUPLICATE`, keeps `SPLIT` and rows with no disposition, requires `objType == STAR` and a finite Tmag. The meaning of `SPLIT` was not checked in installed docs, so keeping it is a guess. TIC `ID` is a string column in astroquery output. |
+| C7 | Flux zero point | ASSUMED | `TESS_E_PER_S_AT_T10 = 15000` e-/s. Phase 1 check on the 2 sparse targets: measured pipeline-aperture flux over expected was 0.91 and 0.98, plausible for an isolated star. Crowded targets give 1.8 to 24.6 because of neighbors. A rough scale only. |
 
 ## D. SPEC ambiguities to settle before the Day 2 freeze
 
@@ -47,6 +49,11 @@ These are gaps in `docs/SPEC.md` found while writing it. Neither track should si
 | D9 | Empty prediction sets: the SPEC rule can produce an empty set when the cutoff is below every star's score | Report empty-set rate. Do not patch silently. |
 | D10 | Padding for fewer than 20 candidates: mask semantics and value used in `star_xy`, `star_tmag` | `star_mask` True = real star. Padded entries are zero and ignored. |
 | D11 | Seeds: do seeds change the data split, the model init, or both? | Model init and training order only. Splits fixed by a split seed recorded in meta.json. Needs confirmation. |
+| D12 | N = 20 truncation. Phase 1 found 248 to 316 TIC stars within 3 px in all 3 crowded smoke targets (only 2 to 6 in the 2 sparse ones), nearly all faint. Which 20 are kept? | Brightest 20 within 3 px, and report the fraction of candidate flux lost by truncation. The true source must be inside the kept set. Alternatives: nearest 20, or a Tmag cut then brightest. Needs a decision before Phase 2. |
+| D13 | True source and depth. A fixed 1% depth on a random candidate gives undetectable dips on faint stars: peak z of 0.2 to 2 in the 3 crowded smoke targets (injected Tmag about 14.2 to 14.8). | Restrict the true source to kept stars brighter than a Tmag limit, draw depth to reach a target SNR range, record SNR, and report results by SNR bin. Needs a decision. |
+| D14 | Difference-image systematics. For the Tmag 9 crowded target the difference image is dominated by an offset of about -100 e-/s at the target (pointing and instrument systematics, not the injection). SPEC says only "mean out-of-transit minus mean in-transit". | Use local windows around each transit (0.75 to 2.5 durations, as in `pixels.py`) plus a local linear baseline per transit before differencing. Record as a SPEC clarification. Not yet implemented in `pixels.py`. |
+| D15 | Cutout centring. All 5 TPFs are 11x11 but the target sits at x 4.0 to 6.2, y 4.4 to 5.4, not at the centre. | Shift by whole pixels so the target pixel is at (5, 5), pad with zero and mask, keep sub-pixel star positions in cutout coordinates. |
+| D16 | Sparse fields are nearly trivial: 2 to 6 candidates, and the true source is often the target. The crowding terciles could be set mostly by field choice. | Print the crowding histogram in Phase 2 before fixing the target list. Consider intermediate galactic latitudes. |
 
 ## E. Environment
 
