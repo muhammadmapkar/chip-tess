@@ -8,9 +8,11 @@ Candidate stars come from the TIC (Gaia-derived). Proper motion is ignored.
 """
 import argparse
 import datetime
+import itertools
 import json
 import shutil
 import sys
+import threading
 import time
 import traceback
 import warnings
@@ -49,6 +51,37 @@ class DiskLow(RuntimeError):
     pass
 
 
+_counter = itertools.count(1)
+_log_lock = threading.Lock()
+
+
+def log(msg):
+    """Progress goes to a file, not sys.stdout: some library code swaps sys.stdout from worker threads and can
+    leave it closed, which killed the previous runs' prints."""
+    with _log_lock, open(INTERIM / "build_progress.log", "a") as f:
+        f.write(msg + "\n")
+
+
+def fetch_tpf(hit, tic, tries=3):
+    """Download one TPF. MAST sometimes returns a truncated file that Lightkurve then caches and reuses,
+    so on a read failure the cached file is deleted and the download is tried again."""
+    last = None
+    for attempt in range(tries):
+        try:
+            tpf = hit.download(download_dir=str(RAW))
+            if tpf is None:
+                raise LookupError("download returned None")
+            return tpf
+        except DiskLow:
+            raise
+        except Exception as e:
+            last = e
+            for f in RAW.glob(f"**/*{tic:016d}*_tp.fits"):
+                f.unlink()
+            time.sleep(5 * (attempt + 1))
+    raise last
+
+
 def free_gb():
     return shutil.disk_usage(ROOT).free / 1e9
 
@@ -70,9 +103,7 @@ def process_target(row):
             f"TIC {tic}", mission="TESS", author="SPOC", exptime=120, sector=sector))
         if len(res) == 0:
             raise LookupError("no SPOC 2-minute TPF found")
-        tpf = with_retries(lambda: res[0].download(download_dir=str(RAW)))
-        if tpf is None:
-            raise LookupError("download returned None")
+        tpf = fetch_tpf(res[0], tic)
         flux_raw, time_ = tpf.flux.value, tpf.time.value
         h, w = flux_raw.shape[1:]
         info.update(tpf_shape=f"{h}x{w}", n_cadences=int(flux_raw.shape[0]), camera=int(tpf.camera), ccd=int(tpf.ccd),
@@ -115,6 +146,8 @@ def process_target(row):
         info["status"] = "error"
     SHARDS.mkdir(parents=True, exist_ok=True)
     done.write_text(json.dumps(info))
+    log(f"[{next(_counter)}] TIC {tic} {info['status']} n={info['n_samples']} crowd={info.get('crowd', float('nan')):.3f} "
+          f"kappa={info.get('kappa', float('nan')):.2f} {info.get('error', '')[:90]} (free {free_gb():.0f} GB)")
     return info
 
 
@@ -123,22 +156,18 @@ def run(limit):
     if limit:
         sel = sel.sample(n=limit, random_state=0) if limit < len(sel) else sel
     rows = sel.to_dict("records")
-    t0, n_ok = time.time(), 0
+    n_ok = 0
     with ThreadPoolExecutor(config.WORKERS) as ex:
-        futs = {ex.submit(process_target, r): r for r in rows}
-        for i, fut in enumerate(as_completed(futs), 1):
+        futs = [ex.submit(process_target, r) for r in rows]
+        for fut in futs:
             try:
-                inf = fut.result()
+                n_ok += fut.result()["status"] == "ok"
             except DiskLow as e:
-                print(f"STOP: {e}", flush=True)
+                log(f"STOP: {e}")
                 for f in futs:
                     f.cancel()
                 break
-            n_ok += inf["status"] == "ok"
-            print(f"[{i}/{len(rows)}] TIC {inf['tic_id']} {inf['status']} n={inf['n_samples']} "
-                  f"crowd={inf.get('crowd', float('nan')):.3f} kappa={inf.get('kappa', float('nan')):.2f} "
-                  f"{inf.get('error', '')} ({time.time() - t0:.0f}s, free {free_gb():.0f} GB)", flush=True)
-    print(f"finished: {n_ok} ok of {len(rows)}")
+    log(f"finished: {n_ok} ok of {len(rows)}")
 
 
 def clusters_by_separation(ra, dec, arcmin):
@@ -171,6 +200,8 @@ def assign_splits(cluster, seed=config.SPLIT_SEED):
 
 def merge():
     infos = pd.DataFrame([json.loads(p.read_text()) for p in sorted(SHARDS.glob("*.json"))])
+    chosen = pd.read_csv(INTERIM / "selected_targets.csv")  # shards from other runs (dry runs) are left out
+    infos = infos[infos["tic_id"].isin(chosen["tic_id"])].reset_index(drop=True)
     ok = infos[infos["n_samples"] > 0].reset_index(drop=True)
     ok["cluster"] = clusters_by_separation(ok["ra"].to_numpy(), ok["dec"].to_numpy(), config.CLUSTER_ARCMIN)
     split_of_cluster = assign_splits(ok["cluster"].to_numpy())
@@ -256,7 +287,7 @@ def main():
         traceback.print_exc()
         return
     print(json.dumps({k: meta[k] for k in ("n_targets_attempted", "n_targets_with_samples", "n_targets_no_samples",
-                                           "n_targets_error", "n_samples", "crowd_edges_cal", "counts")}, indent=1))
+                                           "n_targets_error", "n_samples", "crowd_edges_cal", "counts")}, indent=1), file=sys.__stdout__)
 
 
 if __name__ == "__main__":
