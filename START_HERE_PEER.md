@@ -12,10 +12,11 @@ Follow these steps in order. Repo URL: https://github.com/muhammadmapkar/chip-te
 8. Work only inside `track1_synthetic/`. Do not read or import `track2_real/`.
 9. Commit often. Push with: `git push -u origin track1/start`
 10. Open a pull request from your fork's branch to upstream `main`. Muhammad reviews it.
-11. After `setup/scaffold` is merged to `main`, sync with: `git fetch upstream`, then `git merge upstream/main`.
+11. To pick up later changes, sync with: `git fetch upstream`, then `git merge upstream/main`.
 
 Notes:
 
+- `main` and `setup/scaffold` already contain the whole scaffold. The repo also contains `track2_real/` (Muhammad's folder). Do not open it.
 - If you were invited as a collaborator instead of forking, `origin` is already the shared repo. Skip step 3 and use `origin` in place of `upstream`. Push only branches named `track1/<task>`.
 - Never push to `main`. Never force push.
 - Exact commands for everything else are in `GIT_CHEATSHEET.md`.

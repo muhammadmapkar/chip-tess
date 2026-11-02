@@ -53,4 +53,4 @@ Both tracks are fully independent. There is no code import between track folders
 
 ## Status
 
-Phase 0 (scaffold) only. No experiments have been run and there are no results yet.
+Phase 0 (scaffold) and Phase 1 (Track 2 data smoke test on 5 targets) are done. No experiments have been run and there are no results yet.
