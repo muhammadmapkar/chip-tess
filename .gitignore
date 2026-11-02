@@ -1,0 +1,34 @@
+# Data and model artifacts (never commit)
+data/
+*.npz
+*.pt
+*.ckpt
+*.pth
+
+# Raw and large astronomy or array files
+*.fits
+*.fits.gz
+*.h5
+*.hdf5
+*.npy
+*.pkl
+
+# Environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+.mypy_cache/
+.ruff_cache/
+
+# Large outputs (put anything big here; small CSVs and figures stay committed)
+outputs/large/
+**/outputs/large/
+*.log
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/
